@@ -9,31 +9,54 @@
 
 #include <opencv2/opencv.hpp>
 
-struct KittiFrame{
-    cv::Mat left_img;
-    cv::Mat right_img;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr ptcloud;
-};
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
-class KittiLoader{
-public:
-    KittiLoader(const std::string &data_root, bool &if_success);
+namespace kitti{
 
-    size_t Size(){return size_;}
+    struct Frame {
+        cv::Mat left_img;
+        cv::Mat right_img;
+        pcl::PointCloud<pcl::PointXYZI>::Ptr ptcloud;
+    };
 
-    KittiFrame operator[](size_t i) const;
-    
-    static pcl::PointCloud<pcl::PointXYZI>::Ptr LoadPtCloud(const std::string &path);
+    struct Intrinsics {
+        float fx;
+        float fy;
+        float cx;
+        float cy;
+    };
 
-private:
-    size_t GetFileNumInDir(const boost::filesystem::path &p);
+    class KittiLoader {
+    public:
+        KittiLoader(const std::string& data_root, bool& if_success);
 
-    boost::filesystem::path root_;
-    boost::filesystem::path lidar_path_;
-    boost::filesystem::path left_img_path_;
-    boost::filesystem::path right_img_path_;
+        inline size_t Size() { return size_; }
+        inline Intrinsics GetLeftCamIntrinsics() { return left_cam_intrinsics_; }
 
-    size_t size_ = 0;
+        Frame operator[](size_t i) const;
+
+        static pcl::PointCloud<pcl::PointXYZI>::Ptr LoadPtCloud(const std::string& path);
+
+    private:
+        size_t GetFileNumInDir(const boost::filesystem::path& p);
+        void LoadCaliData(const std::string& path);
+
+        boost::filesystem::path root_;
+        boost::filesystem::path lidar_path_;
+        boost::filesystem::path left_img_path_;
+        boost::filesystem::path right_img_path_;
+        boost::filesystem::path cali_file_path_;
+
+        Intrinsics left_cam_intrinsics_;
+
+        // Transform from lidar to left camera
+        Eigen::Isometry3f T_lc_l_;
+
+        size_t size_ = 0;
+    };
+
+
 };
 
 #endif

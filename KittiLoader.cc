@@ -17,22 +17,39 @@ using std::string;
 using std::ifstream;
 using std::vector;
 
+using kitti::KittiLoader;
+using kitti::Frame;
+using kitti::Intrinsics;
+
 KittiLoader::KittiLoader(const string &data_root, bool &if_success) : root_(data_root){
     using boost::filesystem::exists;
 
     lidar_path_ = root_ / ("velodyne");
     left_img_path_ = root_ / ("image_0");
     right_img_path_ = root_ / ("image_1");
+    cali_file_path_ = root_ / ("calib.txt");
 
     cout << "[KittiLoader] Desired data path:" << endl
          << "-- LiDAR data: " << lidar_path_.string() << endl
          << "-- Left camera image: " << left_img_path_.string() << endl
-         << "-- Right camera image: " << right_img_path_.string() << endl;
+         << "-- Right camera image: " << right_img_path_.string() << endl
+         << "-- Calibration file: " << cali_file_path_.string() << endl;
 
-    if(!(exists(lidar_path_) && exists(left_img_path_) && exists(right_img_path_))){
+    if(!(exists(lidar_path_) && exists(left_img_path_) && exists(right_img_path_) && exists(cali_file_path_))){
         cerr << "[KittiLoader] Dataset not complete, check if the desired data path exists." << endl;
         if_success = false;
     }
+
+    LoadCaliData(cali_file_path_.string());
+
+    cout << "[KittiLoader] Left camera intrinsics:" << endl
+        << "-- fx: " << left_cam_intrinsics_.fx << endl
+        << "-- fy: " << left_cam_intrinsics_.fy << endl
+        << "-- cx: " << left_cam_intrinsics_.cx << endl
+        << "-- cy: " << left_cam_intrinsics_.cy << endl;
+
+    cout << "[KittiLoader] LiDAR extrinsics:" << endl
+        << T_lc_l_.matrix() << endl;
 
     size_t lidar_data_num = GetFileNumInDir(lidar_path_);
     size_t left_img_num = GetFileNumInDir(left_img_path_);
@@ -48,7 +65,7 @@ KittiLoader::KittiLoader(const string &data_root, bool &if_success) : root_(data
     if_success = true;
 }
 
-KittiFrame KittiLoader::operator[](size_t i) const{
+Frame KittiLoader::operator[](size_t i) const{
     using boost::format;
     format fmt_lidar("%s/%06d.bin");
     format fmt_img("%s/%06d.png");
@@ -57,7 +74,7 @@ KittiFrame KittiLoader::operator[](size_t i) const{
     string left_img = (fmt_img % left_img_path_.string() % i).str();
     string right_img = (fmt_img % right_img_path_.string() % i).str();
 
-    KittiFrame f;
+    Frame f;
     f.ptcloud = LoadPtCloud(ptcloud);
     f.left_img = cv::imread(left_img);
     f.right_img = cv::imread(right_img);
@@ -99,4 +116,54 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr KittiLoader::LoadPtCloud(const string &path
     lidar_frame_ptr->height = 1;
 
     return lidar_frame_ptr;
+}
+
+void KittiLoader::LoadCaliData(const std::string& path) {
+    ifstream fin(path);
+
+    for (int i = 0; i < 4; ++i) {
+        char cam_name[3];
+        for (int j = 0; j < 3; ++j) {
+            fin >> cam_name[j];
+        }
+
+        double projection_data[12];
+        for (int j = 0; j < 12; ++j) {
+            fin >> projection_data[j];
+        }
+
+        // Here we only load the left camera intrinsics
+        // Intrinsics matrix:
+        //   projection_data[0], projection_data[1], projection_data[2],
+        //   projection_data[4], projection_data[5], projection_data[6],
+        //   projection_data[8], projection_data[9], projection_data[10];
+        if (i == 0) {
+            left_cam_intrinsics_.fx = projection_data[0];
+            left_cam_intrinsics_.fy = projection_data[5];
+            left_cam_intrinsics_.cx = projection_data[2];
+            left_cam_intrinsics_.cy = projection_data[6];
+        }
+    }
+
+    // Load extrinsics (T_lc_l)
+    char trans_prefix[3];
+    for (int k = 0; k < 3; ++k) {
+        fin >> trans_prefix[k];
+    }
+
+    double lidar_trans_data[12];
+    for (int k = 0; k < 12; ++k) {
+        fin >> lidar_trans_data[k];
+    }
+
+    Eigen::Matrix3f rotation;
+    rotation << lidar_trans_data[0], lidar_trans_data[1], lidar_trans_data[2],
+                lidar_trans_data[4], lidar_trans_data[5], lidar_trans_data[6],
+                lidar_trans_data[8], lidar_trans_data[9], lidar_trans_data[10];
+
+    Eigen::Vector3f translation;
+    translation << lidar_trans_data[3], lidar_trans_data[7], lidar_trans_data[11];
+
+    T_lc_l_ = Eigen::Isometry3f(rotation);
+    T_lc_l_.pretranslate(translation);
 }

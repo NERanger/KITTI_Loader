@@ -18,6 +18,10 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 ############### Dependencies ####################
+
+# Eigen3
+find_package(Eigen3 REQUIRED)
+
 # PCL
 find_package(PCL 1.3 REQUIRED COMPONENTS common)
 link_directories(${PCL_LIBRARY_DIRS})
@@ -34,4 +38,4 @@ include_directories(
 include_directories(${PROJECT_SOURCE_DIR})
 
 add_executable(kitti_loader example.cc KittiLoader.cc)
-target_link_libraries(kitti_loader ${PCL_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(kitti_loader ${PCL_LIBRARIES} ${OpenCV_LIBS} Eigen3::Eigen)
