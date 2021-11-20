@@ -3,6 +3,8 @@
 
 #include <opencv2/opencv.hpp>
 
+#include <pcl/visualization/cloud_viewer.h>
+
 #include "KittiLoader.hpp"
 
 using std::cout;
@@ -28,12 +30,14 @@ int main(int argc, char const *argv[]){
         return EXIT_FAILURE;
     }
 
+    pcl::visualization::CloudViewer cloud_viewer("Point Cloud");
     for(size_t i = 0; i < dataset.Size() ; ++i){
         Frame f = dataset[i];
-        cv::imshow("Left", f.left_img);
-        cv::imshow("Right", f.right_img);
+        // cv::imshow("Left", f.left_img);
+        // cv::imshow("Right", f.right_img);
+        cloud_viewer.showCloud(f.ptcloud);
 
-        cv::waitKey(0);
+        // cv::waitKey(10);
     }
     
     return EXIT_SUCCESS;

@@ -23,7 +23,7 @@ endif()
 find_package(Eigen3 REQUIRED)
 
 # PCL
-find_package(PCL 1.3 REQUIRED COMPONENTS common)
+find_package(PCL 1.3 REQUIRED COMPONENTS common visualization)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
