@@ -6,6 +6,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
+#include <pcl/common/transforms.h>
+
 #include <opencv2/opencv.hpp>
 
 #include "KittiLoader.hpp"
@@ -133,6 +135,44 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr KittiLoader::LoadPtCloud(const string &path
     lidar_frame_ptr->is_dense = true;
 
     return lidar_frame_ptr;
+}
+
+pcl::PointCloud<pcl::PointXYZI>::Ptr KittiLoader::ConcatePtCloud(size_t start_idx, unsigned int num_of_cloud){
+    using pcl::PointCloud;
+    using pcl::PointXYZI;
+
+    if(!gt_available_){
+        cerr << "[KittiLoader] Groundtruth not available, cannot perform concatation" << endl;
+        return nullptr;
+    }
+
+    if(start_idx >= size_){
+        cerr << "[KittiLoader] Start index out of bound" << endl;
+        return nullptr;
+    }
+
+    size_t end_idx = start_idx + num_of_cloud;
+    if(end_idx >= size_){
+        end_idx = size_;
+    }
+
+    using boost::format;
+    format fmt_lidar("%s/%06d.bin");
+
+    PointCloud<PointXYZI>::Ptr result(new PointCloud<PointXYZI>);
+    for(unsigned int i = start_idx; i < end_idx; ++i){
+        string ptcloud_file = (fmt_lidar % lidar_path_.string() % i).str();
+        PointCloud<PointXYZI>::Ptr ptcloud = LoadPtCloud(ptcloud_file);
+
+        // Transform to world frame
+        pcl::transformPointCloud(*ptcloud, *ptcloud, (gt_poses_[i] * T_lc_l_).matrix());
+        *result += *ptcloud;
+    }
+
+    // Transform back to frame at start_idx
+    pcl::transformPointCloud(*result, *result, (gt_poses_[start_idx] * T_lc_l_).inverse().matrix());
+
+    return result;
 }
 
 void KittiLoader::LoadCaliData(const std::string& path) {

@@ -39,6 +39,7 @@ namespace kitti{
         Frame operator[](size_t i) const;
 
         static pcl::PointCloud<pcl::PointXYZI>::Ptr LoadPtCloud(const std::string& path);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr ConcatePtCloud(size_t start_idx, unsigned int num_of_cloud);
 
     private:
         size_t GetFileNumInDir(const boost::filesystem::path& p);
