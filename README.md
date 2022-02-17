@@ -6,6 +6,7 @@ A simple loader for [KITTI](http://www.cvlibs.net/datasets/kitti/eval_odometry.p
 
 * Stereo image loading
 * LiDAR pointcloud loading
+* Pointcloud concatenation (based on groundtruth pose)
 
 ## Usage
 
