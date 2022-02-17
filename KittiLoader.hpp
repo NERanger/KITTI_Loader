@@ -34,6 +34,7 @@ namespace kitti{
 
         inline size_t Size() { return size_; }
         inline Intrinsics GetLeftCamIntrinsics() { return left_cam_intrinsics_; }
+        inline Eigen::Isometry3f GetExtrinsics() const { return T_lc_l_; }
 
         Frame operator[](size_t i) const;
 
