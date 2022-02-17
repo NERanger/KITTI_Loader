@@ -30,15 +30,15 @@ int main(int argc, char const *argv[]){
         return EXIT_FAILURE;
     }
 
-    pcl::visualization::CloudViewer cloud_viewer("Point Cloud");
+    // pcl::visualization::CloudViewer cloud_viewer("Point Cloud");
     for(size_t i = 0; i < dataset.Size() ; ++i){
         Frame f = dataset[i];
-        // cv::imshow("Left", f.left_img);
-        // cv::imshow("Right", f.right_img);
-        cloud_viewer.showCloud(f.ptcloud);
+        cv::imshow("Left", f.left_img);
+        cv::imshow("Right", f.right_img);
+        // cloud_viewer.showCloud(f.ptcloud);
 
         cout << "Groundtruth pose (left camera) of frame " << i << endl << f.gt_pose.matrix() << endl;
-        // cv::waitKey(0);
+        cv::waitKey(0);
     }
     
     return EXIT_SUCCESS;
