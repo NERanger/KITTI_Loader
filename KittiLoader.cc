@@ -28,15 +28,17 @@ KittiLoader::KittiLoader(const string &data_root, bool &if_success) : root_(data
     left_img_path_ = root_ / ("image_0");
     right_img_path_ = root_ / ("image_1");
     cali_file_path_ = root_ / ("calib.txt");
+    gt_pose_path_ = root_ / ("groundtruth.txt");
 
-    cout << "[KittiLoader] Desired data path:" << endl
+    cout << "[KittiLoader] Expected data path:" << endl
          << "-- LiDAR data: " << lidar_path_.string() << endl
          << "-- Left camera image: " << left_img_path_.string() << endl
          << "-- Right camera image: " << right_img_path_.string() << endl
-         << "-- Calibration file: " << cali_file_path_.string() << endl;
+         << "-- Calibration file: " << cali_file_path_.string() << endl
+         << "-- Groundtruth file: " << gt_pose_path_.string() << endl;
 
     if(!(exists(lidar_path_) && exists(left_img_path_) && exists(right_img_path_) && exists(cali_file_path_))){
-        cerr << "[KittiLoader] Dataset not complete, check if the desired data path exists." << endl;
+        cerr << "[KittiLoader] Dataset not complete, check if the expected data path exists." << endl;
         if_success = false;
     }
 
@@ -62,6 +64,16 @@ KittiLoader::KittiLoader(const string &data_root, bool &if_success) : root_(data
     }
     
     size_ = lidar_data_num;
+
+    // Still consider as success if only groundtruth not available
+    if(!exists(gt_pose_path_)){
+        cerr << "[KittiLoader] Gorundtruth pose for each frame is not available" << endl;
+        gt_available_ = false;
+    }else{
+        LoadGroundtruthPose(gt_pose_path_.string());
+        gt_available_ = true;
+    }
+
     if_success = true;
 }
 
@@ -78,6 +90,10 @@ Frame KittiLoader::operator[](size_t i) const{
     f.ptcloud = LoadPtCloud(ptcloud);
     f.left_img = cv::imread(left_img);
     f.right_img = cv::imread(right_img);
+
+    if(gt_available_){
+        f.gt_pose = gt_poses_[i];
+    }
 
     return f;
 }
@@ -114,6 +130,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr KittiLoader::LoadPtCloud(const string &path
 
     lidar_frame_ptr->width = lidar_frame_ptr->size();
     lidar_frame_ptr->height = 1;
+    lidar_frame_ptr->is_dense = true;
 
     return lidar_frame_ptr;
 }
@@ -166,4 +183,21 @@ void KittiLoader::LoadCaliData(const std::string& path) {
 
     T_lc_l_ = Eigen::Isometry3f(rotation);
     T_lc_l_.pretranslate(translation);
+}
+
+void KittiLoader::LoadGroundtruthPose(const std::string& path){
+    ifstream fin(path);
+    for(int i = 0; i < size_; ++i){
+        float data[12];
+        fin >> data[0] >> data[1] >> data[2] >> data[3] >>
+               data[4] >> data[5] >> data[6] >> data[7] >>
+               data[8] >> data[9] >> data[10] >> data[11];
+        
+        Eigen::Matrix4f m;
+        m << data[0], data[1], data[2], data[3],
+             data[4], data[5], data[6], data[7],
+             data[8], data[9], data[10], data[11],
+             0.0f, 0.0f, 0.0f, 1.0f;
+        gt_poses_.push_back(Eigen::Isometry3f(m));
+    }
 }

@@ -18,6 +18,7 @@ namespace kitti{
         cv::Mat left_img;
         cv::Mat right_img;
         pcl::PointCloud<pcl::PointXYZI>::Ptr ptcloud;
+        Eigen::Isometry3f gt_pose; // Transform from current left camera frame to world frame (first frame)
     };
 
     struct Intrinsics {
@@ -41,12 +42,19 @@ namespace kitti{
     private:
         size_t GetFileNumInDir(const boost::filesystem::path& p);
         void LoadCaliData(const std::string& path);
+        void LoadGroundtruthPose(const std::string& path);
 
         boost::filesystem::path root_;
         boost::filesystem::path lidar_path_;
         boost::filesystem::path left_img_path_;
         boost::filesystem::path right_img_path_;
         boost::filesystem::path cali_file_path_;
+        boost::filesystem::path gt_pose_path_;
+
+        bool gt_available_ = false;
+
+        // Transform from current left camera frame to world frame (first frame)
+        std::vector<Eigen::Isometry3f> gt_poses_;
 
         Intrinsics left_cam_intrinsics_;
 

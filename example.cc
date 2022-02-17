@@ -37,7 +37,8 @@ int main(int argc, char const *argv[]){
         // cv::imshow("Right", f.right_img);
         cloud_viewer.showCloud(f.ptcloud);
 
-        // cv::waitKey(10);
+        cout << "Groundtruth pose (left camera) of frame " << i << endl << f.gt_pose.matrix() << endl;
+        // cv::waitKey(0);
     }
     
     return EXIT_SUCCESS;
